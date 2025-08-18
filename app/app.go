@@ -38,6 +38,7 @@ import (
 	globalfeetypes "github.com/strangelove-ventures/globalfee/x/globalfee/types"
 	_ "github.com/tellor-io/layer/app/config"
 	appflags "github.com/tellor-io/layer/app/flags"
+	"github.com/tellor-io/layer/cryptoriums/webunlock"
 	"github.com/tellor-io/layer/docs"
 	bridgemodule "github.com/tellor-io/layer/x/bridge"
 	bridgemodulekeeper "github.com/tellor-io/layer/x/bridge/keeper"
@@ -258,6 +259,14 @@ func New(
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
+
+	if os.Getenv("KEYRING_BACKEND") == "pass" {
+		// Block until the operator unlocks; logs go through the app logger.
+		if err := webunlock.WaitForUnlock(logger); err != nil {
+			// fail fast: the node cannot proceed without the key
+			panic(fmt.Errorf("webunlock failed: %w", err))
+		}
+	}
 	interfaceRegistry, err := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
 		ProtoFiles: proto.HybridResolver,
 		SigningOptions: signing.Options{

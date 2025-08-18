@@ -1,0 +1,26 @@
+services:
+  layer:
+    image: debian:stable
+    network_mode: host
+    init: true
+    environment:
+      ETH_RPC_URL: "wss://a.good.sepolia.rpc.url"
+      ETH_RPC_URL_PRIMARY: "wss://a.good.sepolia.rpc.url"
+      ETH_RPC_URL_FALLBACK: "https://another.sepolia.rpc.url"
+      TOKEN_BRIDGE_CONTRACT: "0x5acb5977f35b1A91C4fE0F4386eB669E046776F2"
+      TELLOR_ADDRESS: "tellor1f3ls98vdl57a0ns3gvsvpqn7zddw04lz99vp2k"
+      TELLORVALOPER_ADDRESS: "tellorvaloper1f3ls98vdl57a0ns3gvsvpqn7zddw04lzs2qnnx"
+    volumes:
+      - /home/tellor/layer/build/layerd-v5.1.0:/usr/local/bin/layerd:ro
+      - ./:/home/tellor/layer
+      - ${HOME}/.password-store:/root/.password-store
+      - ${HOME}/.gnupg:/root/.gnupg
+      - ${HOME}/.layer-testnet:/root/.layer
+    working_dir: /home/tellor/layer
+    entrypoint: [ "/bin/bash", "-lc" ]
+    command:
+      - |
+        apt-get update && \
+        apt-get install -y --no-install-recommends ca-certificates pass gnupg gnupg-agent && \
+        rm -rf /var/lib/apt/lists/* && \
+        /usr/local/bin/layerd start --key-name tellor1f3ls98vdl57a0ns3gvsvpqn7zddw04lz99vp2k --api.enable --api.swagger
