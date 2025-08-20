@@ -23,4 +23,4 @@ services:
         apt-get update && \
         apt-get install -y --no-install-recommends ca-certificates pass gnupg gnupg-agent && \
         rm -rf /var/lib/apt/lists/* && \
-        /usr/local/bin/layerd start --key-name tellor1f3ls98vdl57a0ns3gvsvpqn7zddw04lz99vp2k --api.enable --api.swagger
+        /usr/local/bin/layerd start --api.enable --api.swagger
