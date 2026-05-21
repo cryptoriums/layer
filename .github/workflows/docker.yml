@@ -2,8 +2,6 @@ name: Docker
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
       - '!reporterd/v*'
@@ -38,10 +36,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/layer
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
         uses: docker/build-push-action@v6
