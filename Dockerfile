@@ -29,6 +29,9 @@ RUN apk update && apk add --no-cache \
 WORKDIR /layer
 
 COPY go.mod go.sum ./
+# Local replace target for the vendored bridge-remote-signer api — must be present
+# before `go mod download` so the relative replace resolves.
+COPY vendor-api ./vendor-api
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
 

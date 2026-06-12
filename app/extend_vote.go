@@ -16,6 +16,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/viper"
+	"github.com/tellor-io/layer/app/remotesigner"
 	bridgetypes "github.com/tellor-io/layer/x/bridge/types"
 	oracletypes "github.com/tellor-io/layer/x/oracle/types"
 	registrytypes "github.com/tellor-io/layer/x/registry/types"
@@ -27,12 +28,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	signerv1 "github.com/tellor-io/bridge-remote-signer/api/gen/signer/v1"
 )
 
 type OracleKeeper interface {
 	GetTimestampBefore(ctx context.Context, queryId []byte, timestamp time.Time) (time.Time, error)
 	GetTimestampAfter(ctx context.Context, queryId []byte, timestamp time.Time) (time.Time, error)
 	GetAggregatedReportsByHeight(ctx context.Context, height uint64) ([]oracletypes.Aggregate, error)
+	GetAggregateByTimestamp(ctx context.Context, queryId []byte, timestamp uint64) (oracletypes.Aggregate, error)
 }
 
 type BridgeKeeper interface {
@@ -50,6 +53,8 @@ type BridgeKeeper interface {
 	GetValidatorDidSignCheckpoint(ctx context.Context, operatorAddr string, checkpointTimestamp uint64) (didSign bool, prevValsetIndex int64, err error)
 	GetAttestationRequestsByHeight(ctx context.Context, height uint64) (*bridgetypes.AttestationRequests, error)
 	SetOracleAttestation(ctx context.Context, operatorAddress string, snapshot, sig []byte) error
+	GetValsetCheckpointDomainSeparator(ctx context.Context) ([]byte, error)
+	GetAttestationSnapshotDataBySnapshot(ctx context.Context, snapshot []byte) (bridgetypes.AttestationSnapshotData, error)
 }
 
 type StakingKeeper interface {
@@ -154,7 +159,7 @@ func (h *VoteExtHandler) ExtendVoteHandler(ctx sdk.Context, req *abci.RequestExt
 		// iterate through snapshots and generate sigs
 		if len(snapshots) > 0 {
 			for _, snapshot := range snapshots {
-				sig, err := h.SignMessage(snapshot.Snapshot)
+				sig, err := h.SignSnapshot(ctx, snapshot.Snapshot)
 				if err != nil {
 					h.logger.Error("ExtendVoteHandler: failed to sign message", "error", err)
 					bz, err := json.Marshal(voteExt)
@@ -279,6 +284,62 @@ func (h *VoteExtHandler) SignMessage(msg []byte) ([]byte, error) {
 	return sig, nil
 }
 
+// SignSnapshot signs an oracle-attestation snapshot. When the keyring is backed
+// by the remote signer, it builds the structured SignOracleAttestation request
+// (which the signer recomputes the snapshot from and fails closed on mismatch)
+// instead of the blind SignMessage path. With a local file keyring it falls back
+// to the existing blind SignMessage path so behavior is unchanged.
+func (h *VoteExtHandler) SignSnapshot(ctx context.Context, snapshot []byte) ([]byte, error) {
+	kr, err := h.GetKeyring()
+	if err != nil {
+		h.ForceProcessTermination("CRITICAL: failed to get keyring: %v", err)
+		return nil, err // won't reach here
+	}
+	rs, ok := kr.(remotesigner.BridgeRemoteSigner)
+	if !ok {
+		// Local file keyring: blind-sign path unchanged.
+		return h.SignMessage(snapshot)
+	}
+
+	// Remote signer: build the structured, fail-closed request.
+	sd, err := h.bridgeKeeper.GetAttestationSnapshotDataBySnapshot(ctx, snapshot)
+	if err != nil {
+		h.logger.Error("SignSnapshot: failed to get attestation snapshot data", "error", err)
+		return nil, err
+	}
+	agg, err := h.oracleKeeper.GetAggregateByTimestamp(ctx, sd.QueryId, sd.Timestamp)
+	if err != nil {
+		h.logger.Error("SignSnapshot: failed to get aggregate by timestamp", "error", err)
+		return nil, err
+	}
+	// The node stores AggregateValue as a hex string; the signer expects the
+	// already-decoded raw value bytes (same as EncodeOracleAttestationData).
+	valueBytes, err := hex.DecodeString(registrytypes.Remove0xPrefix(agg.AggregateValue))
+	if err != nil {
+		h.logger.Error("SignSnapshot: failed to hex-decode aggregate value", "error", err)
+		return nil, err
+	}
+	req := &signerv1.SignOracleAttestationRequest{
+		QueryId:                sd.QueryId,
+		Value:                  valueBytes,
+		Timestamp:              sd.Timestamp,
+		AggregatePower:         agg.AggregatePower,
+		PreviousTimestamp:      sd.PrevReportTimestamp,
+		NextTimestamp:          sd.NextReportTimestamp,
+		ValsetCheckpoint:       sd.ValidatorCheckpoint,
+		AttestationTimestamp:   sd.AttestationTimestamp,
+		LastConsensusTimestamp: sd.LastConsensusTimestamp,
+		ExpectedSnapshot:       snapshot,
+		RequestId:              "layer-vote-ext",
+	}
+	sig, err := rs.SignOracleAttestation(ctx, req)
+	if err != nil {
+		h.logger.Error("SignSnapshot: remote signer failed to sign oracle attestation", "error", err)
+		return nil, err
+	}
+	return sig, nil
+}
+
 func (h *VoteExtHandler) SignInitialMessage(operatorAddress string) ([]byte, []byte, error) {
 	messageA := fmt.Sprintf("TellorLayer: Initial bridge signature A for operator %s", operatorAddress)
 	messageB := fmt.Sprintf("TellorLayer: Initial bridge signature B for operator %s", operatorAddress)
@@ -385,6 +446,53 @@ func (h *VoteExtHandler) CheckAndSignValidatorCheckpoint(ctx context.Context) (s
 			return nil, 0, err
 		}
 		checkpoint := checkpointParams.Checkpoint
+
+		// Remote signer: use the structured, fail-closed SignBridgeCheckpoint RPC
+		// instead of the blind sign path. Falls back to EncodeAndSignMessage when
+		// using a local file keyring (behavior unchanged).
+		kr, err := h.GetKeyring()
+		if err != nil {
+			h.logger.Error("failed to get keyring", "error", err)
+			return nil, 0, err
+		}
+		if rs, ok := kr.(remotesigner.BridgeRemoteSigner); ok {
+			domainSeparator, err := h.bridgeKeeper.GetValsetCheckpointDomainSeparator(ctx)
+			if err != nil {
+				h.logger.Error("failed to get valset checkpoint domain separator", "error", err)
+				return nil, 0, err
+			}
+			valset, err := h.bridgeKeeper.GetBridgeValsetByTimestamp(ctx, latestCheckpointTimestamp.Timestamp)
+			if err != nil {
+				h.logger.Error("failed to get bridge valset by timestamp", "error", err)
+				return nil, 0, err
+			}
+			validatorSet := make([]*signerv1.BridgeValidator, 0, len(valset.BridgeValidatorSet))
+			for _, val := range valset.BridgeValidatorSet {
+				validatorSet = append(validatorSet, &signerv1.BridgeValidator{
+					EthereumAddress: val.EthereumAddress,
+					Power:           val.Power,
+				})
+			}
+			req := &signerv1.SignBridgeCheckpointRequest{
+				DomainSeparator:    domainSeparator,
+				PowerThreshold:     checkpointParams.PowerThreshold,
+				ValidatorTimestamp: checkpointParams.Timestamp,
+				ValidatorSetHash:   checkpointParams.ValsetHash,
+				ValidatorSet:       validatorSet,
+				BlockHeight:        checkpointParams.BlockHeight,
+				CheckpointIndex:    latestCheckpointIdx,
+				ChainId:            sdk.UnwrapSDKContext(ctx).ChainID(),
+				ExpectedCheckpoint: checkpoint,
+				RequestId:          "layer-vote-ext",
+			}
+			signature, err := rs.SignBridgeCheckpoint(ctx, req)
+			if err != nil {
+				h.logger.Error("remote signer failed to sign bridge checkpoint", "error", err)
+				return nil, 0, err
+			}
+			return signature, latestCheckpointTimestamp.Timestamp, nil
+		}
+
 		checkpointString := hex.EncodeToString(checkpoint)
 		signature, err := h.EncodeAndSignMessage(checkpointString)
 		if err != nil {
@@ -420,6 +528,20 @@ func (h *VoteExtHandler) EncodeAndSignMessage(checkpointString string) ([]byte, 
 }
 
 func (h *VoteExtHandler) InitKeyring() (keyring.Keyring, error) {
+	// Remote-signer mode: when --remote-signer-addr is set, sign vote-extensions
+	// through the remote signer (SignRaw over mTLS) — no local private key needed.
+	if addr := viper.GetString("remote-signer-addr"); addr != "" {
+		kr, err := remotesigner.NewKeyring(context.Background(), viper.GetString("key-name"), addr,
+			viper.GetString("remote-signer-ca-cert"),
+			viper.GetString("remote-signer-client-cert"),
+			viper.GetString("remote-signer-client-key"))
+		if err != nil {
+			return nil, fmt.Errorf("init remote-signer keyring: %w", err)
+		}
+		h.logger.Info("vote-extension signing via remote signer", "addr", addr)
+		return kr, nil
+	}
+
 	krBackend := viper.GetString("keyring-backend")
 	if krBackend == "" {
 		return nil, fmt.Errorf("keyring-backend not set, please use --keyring-backend flag")
