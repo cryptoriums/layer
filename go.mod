@@ -42,6 +42,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/strangelove-ventures/globalfee v0.50.1
 	github.com/stretchr/testify v1.11.1
+	github.com/tellor-io/bridge-remote-signer/api v0.0.0-20260625110956-a0eb13ebf52a
 	github.com/vektra/mockery/v2 v2.23.1
 	go.uber.org/mock v0.5.2
 	golang.org/x/text v0.32.0
@@ -288,11 +289,6 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
-
-// Vendored bridge-remote-signer api (gRPC client + mTLS) for remote vote-extension signing.
-require github.com/tellor-io/bridge-remote-signer/api v0.0.0
-
-replace github.com/tellor-io/bridge-remote-signer/api => ./vendor-api
 
 // Pin grpc/protobuf to the versions this module already uses, so the vendored
 // api dependency cannot pull them up to incompatible versions.
