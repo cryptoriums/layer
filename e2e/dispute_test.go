@@ -50,9 +50,18 @@ const (
 
 // minorDisputeFeeFromReportPower matches x/dispute keeper GetDisputeFee for minor disputes (5% of report bond).
 func minorDisputeFeeFromReportPower(reportPower uint64) math.Int {
+	return disputeFeeFromReportPower(reportPower, 5)
+}
+
+// warningDisputeFeeFromReportPower matches x/dispute keeper GetDisputeFee for warning disputes (1% of report bond).
+func warningDisputeFeeFromReportPower(reportPower uint64) math.Int {
+	return disputeFeeFromReportPower(reportPower, 1)
+}
+
+func disputeFeeFromReportPower(reportPower uint64, percent int64) math.Int {
 	stake := layertypes.PowerReduction.MulRaw(int64(reportPower))
 	stakeDec := math.LegacyNewDecFromInt(stake)
-	feeDec := stakeDec.Mul(math.LegacyNewDec(5)).Quo(math.LegacyNewDec(100))
+	feeDec := stakeDec.Mul(math.LegacyNewDec(percent)).Quo(math.LegacyNewDec(100))
 	return feeDec.TruncateInt()
 }
 
@@ -1064,7 +1073,10 @@ func TestReportDelegateMoreMajorDispute(t *testing.T) {
 	require.NoError(err)
 	err = json.Unmarshal(res, &reportersRes)
 	require.NoError(err)
-	require.Equal(len(reportersRes.Reporters), numReporters) // 2 reporters (the third reporter was deleted )
+	require.Equal(numReporters, len(reportersRes.Reporters), "user1 should be hidden while self-demotion is pending, got %+v", reportersRes.Reporters)
+	for _, reporter := range reportersRes.Reporters {
+		require.NotEqual(user1Addr, reporter.Address)
+	}
 	fmt.Println("reportersRes: ", reportersRes)
 
 	// user1 redelegates to val2
