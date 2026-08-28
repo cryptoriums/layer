@@ -29,7 +29,7 @@ const (
 )
 
 func TestLayerUpgrade(t *testing.T) {
-	ChainUpgradeTest(t, "layer", "layer", "local", "v6.1.6")
+	ChainUpgradeTest(t, "layer", "layer", "local", "v6.1.7")
 }
 
 func ChainUpgradeTest(t *testing.T, chainName, upgradeContainerRepo, upgradeVersion, upgradeName string) {
@@ -38,7 +38,6 @@ func ChainUpgradeTest(t *testing.T, chainName, upgradeContainerRepo, upgradeVers
 		t.Skip("skipping in short mode")
 	}
 
-	t.Parallel()
 	cosmos.SetSDKConfig("tellor")
 
 	modifyGenesis := []cosmos.GenesisKV{
@@ -293,6 +292,15 @@ func ChainUpgradeTest(t *testing.T, chainName, upgradeContainerRepo, upgradeVers
 	err = json.Unmarshal(reports, &reportsRes)
 	require.NoError(t, err, "error unmarshaling page-offset test")
 	require.Equal(t, 10, len(reportsRes.MicroReports), "Page-offset test should return all 10 reports")
+
+	// Verify nodes can restart after the upgrade
+	restartCtx, restartCancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer restartCancel()
+	err = chain.StopAllNodes(restartCtx)
+	require.NoError(t, err, "error stopping upgraded node(s)")
+	err = chain.StartAllNodes(restartCtx)
+	require.NoError(t, err, "error restarting upgraded node(s)")
+	require.NoError(t, testutil.WaitForBlocks(restartCtx, 1, chain), "chain did not produce blocks after restart")
 
 	fmt.Println("=== All tests completed successfully! ===")
 }
