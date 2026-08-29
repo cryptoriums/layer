@@ -1,0 +1,13 @@
+syntax = "proto3";
+package layer.dispute;
+
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/tellor-io/layer/x/dispute/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (gogoproto.goproto_stringer) = false;
+  bytes team_address = 1;
+}

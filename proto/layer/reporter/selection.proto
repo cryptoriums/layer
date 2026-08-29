@@ -1,0 +1,22 @@
+syntax = "proto3";
+package layer.reporter;
+
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tellor-io/layer/x/reporter/types";
+
+// Selection is a type that represents a  delegator's selection
+message Selection {
+  // reporter is the address of the reporter being delegated to
+  bytes reporter = 1;
+  // locked_until_time is the time until which the tokens are locked before they
+  // can be used for reporting again
+  google.protobuf.Timestamp locked_until_time = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdtime) = true
+  ];
+  uint64 delegations_count = 3;
+}

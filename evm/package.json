@@ -1,0 +1,38 @@
+{
+  "name": "evm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.4",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@nomiclabs/hardhat-ethers": "^2.0.4",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "axios": "^1.6.8",
+    "chai": "^4.3.10",
+    "elliptic": "^6.5.5",
+    "ethers": "^5.7.0",
+    "hardhat": "^2.22.3",
+    "hardhat-gas-reporter": "^2.2.0",
+    "web3": "^1.10.4"
+  },
+  "mocha": {},
+  "dependencies": {
+    "@cosmjs/proto-signing": "^0.32.3",
+    "@cosmjs/stargate": "^0.32.3",
+    "google-protobuf": "^3.21.2",
+    "polygongovernance": "github:tellor-io/polygongovernance",
+    "protoc-gen-grpc-web": "^1.4.2",
+    "tellorflex": "github:tellor-io/tellorflex",
+    "usingtellor": "5.0.4"
+  }
+}

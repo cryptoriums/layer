@@ -1,0 +1,34 @@
+syntax = "proto3";
+package layer.reporter;
+
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tellor-io/layer/x/reporter/types";
+
+// OracleReporter is the struct that holds the data for a reporter
+message OracleReporter {
+  // min_tokens_required to select this reporter
+  string min_tokens_required = 1 [
+    (cosmos_proto.scalar) = "cosmos.Int",
+    (gogoproto.customtype) = "cosmossdk.io/math.Int",
+    (gogoproto.nullable) = false
+  ];
+  // commission for the reporter
+  string commission_rate = 2 [
+    (cosmos_proto.scalar) = "cosmos.LegacyDec",
+    (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
+    (gogoproto.nullable) = false
+  ];
+  // jailed is a bool whether the reporter is jailed or not
+  bool jailed = 3;
+  // jailed_until is the time the reporter is jailed until
+  google.protobuf.Timestamp jailed_until = 4 [
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+

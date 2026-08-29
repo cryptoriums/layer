@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package layer.dispute;
+
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/msg/v1/msg.proto";
+import "gogoproto/gogo.proto";
+import "layer/dispute/dispute.proto";
+import "layer/dispute/vote.proto";
+import "layer/oracle/micro_report.proto";
+
+option go_package = "github.com/tellor-io/layer/x/dispute/types";
+
+// Msg defines the Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+  rpc ProposeDispute(MsgProposeDispute) returns (MsgProposeDisputeResponse);
+  rpc AddFeeToDispute(MsgAddFeeToDispute) returns (MsgAddFeeToDisputeResponse);
+  rpc Vote(MsgVote) returns (MsgVoteResponse);
+  rpc UpdateTeam(MsgUpdateTeam) returns (MsgUpdateTeamResponse);
+  rpc WithdrawFeeRefund(MsgWithdrawFeeRefund) returns (MsgWithdrawFeeRefundResponse);
+  rpc AddEvidence(MsgAddEvidence) returns (MsgAddEvidenceResponse);
+  rpc ClaimReward(MsgClaimReward) returns (MsgClaimRewardResponse);
+}
+
+message MsgAddEvidence {
+  option (cosmos.msg.v1.signer) = "caller_address";
+  string caller_address = 1;
+  uint64 dispute_id = 2;
+  repeated layer.oracle.MicroReport reports = 3;
+}
+
+message MsgAddEvidenceResponse {}
+
+message MsgWithdrawFeeRefund {
+  option (cosmos.msg.v1.signer) = "caller_address";
+  string caller_address = 1;
+  string payer_address = 2;
+  uint64 id = 3;
+}
+
+message MsgWithdrawFeeRefundResponse {}
+
+message MsgProposeDispute {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1;
+  layer.oracle.MicroReport report = 2;
+  DisputeCategory dispute_category = 3;
+  cosmos.base.v1beta1.Coin fee = 4 [(gogoproto.nullable) = false];
+  bool pay_from_bond = 5;
+}
+
+message MsgProposeDisputeResponse {}
+
+message MsgAddFeeToDispute {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1;
+  uint64 dispute_id = 2;
+  cosmos.base.v1beta1.Coin amount = 3 [(gogoproto.nullable) = false];
+  bool pay_from_bond = 4;
+}
+
+message MsgAddFeeToDisputeResponse {}
+
+message MsgVote {
+  option (cosmos.msg.v1.signer) = "voter";
+  string voter = 1;
+  uint64 id = 2;
+  VoteEnum vote = 3;
+}
+
+message MsgVoteResponse {}
+
+message MsgUpdateTeam {
+  option (cosmos.msg.v1.signer) = "current_team_address";
+  string current_team_address = 1;
+  string new_team_address = 2;
+}
+
+message MsgUpdateTeamResponse {}
+
+message MsgClaimReward {
+  option (cosmos.msg.v1.signer) = "caller_address";
+  string caller_address = 1;
+  uint64 dispute_id = 2;
+}
+
+message MsgClaimRewardResponse {}

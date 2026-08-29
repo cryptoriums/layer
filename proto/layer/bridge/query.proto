@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+package layer.bridge;
+
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "layer/bridge/params.proto";
+import "layer/oracle/aggregate.proto";
+
+option go_package = "github.com/tellor-io/layer/x/bridge/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Parameters queries the parameters of the module.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/layer/bridge/params";
+  }
+
+  // Queries a list of GetEvmValidators items.
+  rpc GetEvmValidators(QueryGetEvmValidatorsRequest) returns (QueryGetEvmValidatorsResponse) {
+    option (google.api.http).get = "/layer/bridge/get_evm_validators";
+  }
+  // Queries the latest validator checkpoint
+  rpc GetValidatorCheckpoint(QueryGetValidatorCheckpointRequest) returns (QueryGetValidatorCheckpointResponse) {
+    option (google.api.http).get = "/layer/bridge/get_validator_checkpoint";
+  }
+
+  // Queries the validator checkpoint params for a given timestamp
+  rpc GetValidatorCheckpointParams(QueryGetValidatorCheckpointParamsRequest) returns (QueryGetValidatorCheckpointParamsResponse) {
+    option (google.api.http).get = "/layer/bridge/get_validator_checkpoint_params/{timestamp}";
+  }
+
+  // Queries the validator timestamp by index
+  rpc GetValidatorTimestampByIndex(QueryGetValidatorTimestampByIndexRequest) returns (QueryGetValidatorTimestampByIndexResponse) {
+    option (google.api.http).get = "/layer/bridge/get_validator_timestamp_by_index/{index}";
+  }
+
+  // Queries the validator set signatures for a given timestamp
+  rpc GetValsetSigs(QueryGetValsetSigsRequest) returns (QueryGetValsetSigsResponse) {
+    option (google.api.http).get = "/layer/bridge/get_valset_sigs/{timestamp}";
+  }
+
+  // Queries the evm address by validator address
+  rpc GetEvmAddressByValidatorAddress(QueryGetEvmAddressByValidatorAddressRequest) returns (QueryGetEvmAddressByValidatorAddressResponse) {
+    option (google.api.http).get = "/layer/bridge/get_evm_address_by_validator_address/{validator_address}";
+  }
+
+  // Queries the validator set by timestamp
+  rpc GetValsetByTimestamp(QueryGetValsetByTimestampRequest) returns (QueryGetValsetByTimestampResponse) {
+    option (google.api.http).get = "/layer/bridge/get_valset_by_timestamp/{timestamp}";
+  }
+
+  // Queries a list of snapshots by report query id and timestamp
+  rpc GetSnapshotsByReport(QueryGetSnapshotsByReportRequest) returns (QueryGetSnapshotsByReportResponse) {
+    option (google.api.http).get = "/layer/bridge/get_snapshots_by_report/{query_id}/{timestamp}";
+  }
+
+  // Queries attestation data by snapshot
+  rpc GetAttestationDataBySnapshot(QueryGetAttestationDataBySnapshotRequest) returns (QueryGetAttestationDataBySnapshotResponse) {
+    option (google.api.http).get = "/layer/bridge/get_attestation_data_by_snapshot/{snapshot}";
+  }
+
+  // Queries the set of attestations by snapshot
+  rpc GetAttestationsBySnapshot(QueryGetAttestationsBySnapshotRequest) returns (QueryGetAttestationsBySnapshotResponse) {
+    option (google.api.http).get = "/layer/bridge/get_attestations_by_snapshot/{snapshot}";
+  }
+
+  // Queries the validator set index by timestamp
+  rpc GetValidatorSetIndexByTimestamp(QueryGetValidatorSetIndexByTimestampRequest) returns (QueryGetValidatorSetIndexByTimestampResponse) {
+    option (google.api.http).get = "/layer/bridge/get_validator_set_index_by_timestamp/{timestamp}";
+  }
+
+  // Queries the current validator set timestamp
+  rpc GetCurrentValidatorSetTimestamp(QueryGetCurrentValidatorSetTimestampRequest) returns (QueryGetCurrentValidatorSetTimestampResponse) {
+    option (google.api.http).get = "/layer/bridge/get_current_validator_set_timestamp";
+  }
+}
+
+// QueryParamsRequest is request type for the Query/Params RPC method.
+message QueryParamsRequest {}
+
+// QueryParamsResponse is response type for the Query/Params RPC method.
+message QueryParamsResponse {
+  // params holds all the parameters of this module.
+  Params params = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryGetEvmValidatorsRequest {}
+
+message QueryGetEvmValidatorsResponse {
+  repeated QueryBridgeValidator bridge_validator_set = 1;
+}
+
+message QueryGetValidatorCheckpointRequest {}
+
+message QueryGetValidatorCheckpointResponse {
+  string validator_checkpoint = 1;
+}
+
+message QueryBridgeValidator {
+  string ethereumAddress = 1;
+  uint64 power = 2;
+}
+
+message QueryBridgeValidatorSet {
+  repeated QueryBridgeValidator bridge_validator_set = 1;
+}
+
+message BridgeValidator {
+  bytes ethereumAddress = 1;
+  uint64 power = 2;
+}
+
+message BridgeValidatorSet {
+  repeated BridgeValidator bridge_validator_set = 1;
+}
+
+message BridgeValidatorSetParams {
+  BridgeValidatorSet bridge_validator_set = 1;
+  uint64 validator_timestamp = 2;
+  uint64 validator_power_threshold = 3;
+  bytes validator_set_hash = 4;
+  bytes validator_checkpoint = 5;
+}
+
+message BridgeValidatorSetCheckpointParams {
+  uint64 validator_timestamp = 1;
+  uint64 validator_power_threshold = 2;
+  bytes validator_set_hash = 3;
+}
+
+message BridgeValidatorSetCheckpoint {
+  bytes validator_checkpoint = 1;
+}
+
+message QueryGetValidatorCheckpointParamsRequest {
+  uint64 timestamp = 1;
+}
+
+message QueryGetValidatorCheckpointParamsResponse {
+  string checkpoint = 1;
+  string valset_hash = 2;
+  uint64 timestamp = 3;
+  uint64 power_threshold = 4;
+}
+
+message QueryGetValidatorTimestampByIndexRequest {
+  uint64 index = 1;
+}
+
+message QueryGetValidatorTimestampByIndexResponse {
+  uint64 timestamp = 1;
+}
+
+message QueryGetValsetSigsRequest {
+  uint64 timestamp = 1;
+}
+
+message QueryGetValsetSigsResponse {
+  repeated string signatures = 1;
+}
+
+message QueryGetEvmAddressByValidatorAddressRequest {
+  string validator_address = 1;
+}
+
+message QueryGetEvmAddressByValidatorAddressResponse {
+  string evm_address = 1;
+}
+
+message QueryGetValsetByTimestampRequest {
+  uint64 timestamp = 1;
+}
+
+message QueryGetValsetByTimestampResponse {
+  repeated QueryBridgeValidator bridge_validator_set = 1;
+}
+
+message QueryGetSnapshotsByReportRequest {
+  string query_id = 1;
+  string timestamp = 2;
+}
+
+message QueryGetSnapshotsByReportResponse {
+  repeated string snapshots = 1;
+}
+
+message QueryGetAttestationDataBySnapshotRequest {
+  string snapshot = 1;
+}
+
+message QueryGetAttestationDataBySnapshotResponse {
+  string query_id = 1;
+  string timestamp = 2;
+  string aggregate_value = 3;
+  string aggregate_power = 4;
+  string checkpoint = 5;
+  string attestation_timestamp = 6;
+  string previous_report_timestamp = 7;
+  string next_report_timestamp = 8;
+}
+
+message QueryGetAttestationsBySnapshotRequest {
+  string snapshot = 1;
+}
+
+message QueryGetAttestationsBySnapshotResponse {
+  repeated string attestations = 1;
+}
+
+message QueryGetValidatorSetIndexByTimestampRequest {
+  uint64 timestamp = 1;
+}
+
+message QueryGetValidatorSetIndexByTimestampResponse {
+  uint64 index = 1;
+}
+
+message QueryGetCurrentValidatorSetTimestampRequest {}
+
+message QueryGetCurrentValidatorSetTimestampResponse {
+  uint64 timestamp = 1;
+}

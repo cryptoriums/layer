@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package layer.oracle;
+
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "amino/amino.proto";
+
+option go_package = "github.com/tellor-io/layer/x/oracle/types";
+
+// QueryMeta represents the metadata of a query
+message QueryMeta {
+  // unique id of the query that changes after query's lifecycle ends
+  uint64 id = 1;
+  // amount of tokens that was tipped
+  string amount = 2 [
+    (cosmos_proto.scalar) = "cosmos.Int",
+    (gogoproto.customtype) = "cosmossdk.io/math.Int",
+    (gogoproto.nullable) = false
+  ];
+  // expiration time of the query
+  uint64 expiration = 3;
+  // timeframe of the query according to the data spec
+  uint64 registry_spec_block_window = 4;
+  // indicates whether query has revealed reports
+  bool has_revealed_reports = 5;
+  // query_data: decodable bytes to field of the data spec
+  bytes query_data = 6;
+  // string identifier of the data spec
+  string query_type = 7;
+  // bool cycle list query
+  bool cycle_list = 8;
+}
+
+message reward {
+  uint64 totalPower = 1;
+  string amount = 2 [
+    (cosmos_proto.scalar) = "cosmos.Dec",
+    (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
+    (gogoproto.nullable) = false
+  ];
+  // cycle_list indicates if a reward should also include timebasedRewards(tbr)
+  bool cycle_list = 3;
+  // if cyclist then tbr amount can be fetched by this height
+  uint64 block_height = 4;
+  string power_paid_out = 5 [
+    (cosmos_proto.scalar) = "cosmos.Dec",
+    (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
+    (gogoproto.nullable) = false
+  ];
+  string amount_paid_out = 6 [
+    (cosmos_proto.scalar) = "cosmos.Dec",
+    (gogoproto.customtype) = "cosmossdk.io/math.LegacyDec",
+    (gogoproto.nullable) = false
+  ];
+}

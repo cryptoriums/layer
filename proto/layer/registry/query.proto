@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package layer.registry;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "layer/registry/data_spec.proto";
+import "layer/registry/params.proto";
+
+option go_package = "github.com/tellor-io/layer/x/registry/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Parameters queries the parameters of the module.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/layer/registry/params";
+  }
+
+  // Queries a list of GetDataSpec items.
+  rpc GetDataSpec(QueryGetDataSpecRequest) returns (QueryGetDataSpecResponse) {
+    option (google.api.http).get = "/layer/registry/get_data_spec/{query_type}";
+  }
+
+  // Queries a list of DecodeQuerydata items.
+  rpc DecodeQuerydata(QueryDecodeQuerydataRequest) returns (QueryDecodeQuerydataResponse) {
+    option (google.api.http).get = "/layer/registry/decode_querydata/{query_data}";
+  }
+
+  // Queries a list of GenerateQuerydata items.
+  rpc GenerateQuerydata(QueryGenerateQuerydataRequest) returns (QueryGenerateQuerydataResponse) {
+    option (google.api.http).get = "/layer/registry/generate_querydata/{querytype}/{parameters}";
+  }
+
+  // Queries a list of DecodeValue items.
+  rpc DecodeValue(QueryDecodeValueRequest) returns (QueryDecodeValueResponse) {
+    option (google.api.http).get = "/layer/registry/decode_value/{queryType}/{value}";
+  }
+}
+
+// QueryParamsRequest is request type for the Query/Params RPC method.
+message QueryParamsRequest {}
+
+// QueryParamsResponse is response type for the Query/Params RPC method.
+message QueryParamsResponse {
+  // params holds all the parameters of this module.
+  Params params = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryGetDataSpecRequest is request type for the Query/GetDataSpec RPC method.
+message QueryGetDataSpecRequest {
+  // queryType is the key to fetch a the corresponding data spec.
+  string query_type = 1;
+}
+
+// QueryGetDataSpecResponse is response type for the Query/GetDataSpec RPC method.
+message QueryGetDataSpecResponse {
+  // spec is the data spec corresponding to the query type.
+  DataSpec spec = 1;
+}
+
+// QueryDecodeQuerydataRequest is request type for the Query/DecodeQuerydata RPC method.
+message QueryDecodeQuerydataRequest {
+  // query_data is the query data hex string to be decoded.
+  bytes query_data = 1;
+}
+
+// QueryDecodeQuerydataResponse is response type for the Query/DecodeQuerydata RPC method.
+message QueryDecodeQuerydataResponse {
+  // spec is the decoded json represention of the query data hex string.
+  string spec = 1;
+}
+
+// QueryGenerateQuerydataRequest is request type for the Query/GenerateQuerydata RPC method.
+message QueryGenerateQuerydataRequest {
+  // querytype for which query_data is to be generated.
+  string querytype = 1;
+
+  // parameters for which query_data is to be generated.
+  string parameters = 2;
+}
+
+// QueryGenerateQuerydataResponse is response type for the Query/GenerateQuerydata RPC method.
+message QueryGenerateQuerydataResponse {
+  // query_data is the generated query_data hex string.
+  bytes query_data = 1;
+}
+
+// QueryDecodeValueRequest is request type for the Query/DecodeValue RPC method.
+message QueryDecodeValueRequest {
+  // queryType is the key to fetch a the corresponding data spec.
+  string queryType = 1;
+  // value is the value hex string to be decoded.
+  string value = 2;
+}
+
+// QueryDecodeValueResponse is response type for the Query/DecodeValue RPC method.
+message QueryDecodeValueResponse {
+  // decodedValue is the decoded value of the hex string.
+  string decodedValue = 1;
+}

@@ -1,0 +1,69 @@
+package dispute
+
+import (
+	modulev1 "github.com/tellor-io/layer/api/layer/dispute"
+
+	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
+)
+
+// AutoCLIOptions implements the autocli.HasAutoCLIConfig interface.
+func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
+	return &autocliv1.ModuleOptions{
+		Query: &autocliv1.ServiceCommandDescriptor{
+			Service: modulev1.Query_ServiceDesc.ServiceName,
+			RpcCommandOptions: []*autocliv1.RpcCommandOptions{
+				{
+					RpcMethod: "Params",
+					Use:       "params",
+					Short:     "Shows the parameters of the module",
+				},
+				{
+					RpcMethod:      "TeamVote",
+					Use:            "team-vote [dispute-id]",
+					Short:          "Shows the team vote for a dispute",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "dispute_id"}},
+				},
+			},
+		},
+		Tx: &autocliv1.ServiceCommandDescriptor{
+			Service:              modulev1.Msg_ServiceDesc.ServiceName,
+			EnhanceCustomCommand: true, // only required if you want to use the custom command
+			RpcCommandOptions: []*autocliv1.RpcCommandOptions{
+				{
+					RpcMethod:      "ProposeDispute",
+					Use:            "propose-dispute [report] [dispute-category] [fee] [pay-from-bond]",
+					Short:          "Execute the ProposeDispute RPC method",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "report"}, {ProtoField: "dispute_category"}, {ProtoField: "fee"}, {ProtoField: "pay_from_bond"}},
+				},
+				{
+					RpcMethod:      "AddFeeToDispute",
+					Use:            "add-fee-to-dispute [dispute-id] [amount] [pay-from-bond]",
+					Short:          "Execute the AddFeeToDispute RPC method",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "dispute_id"}, {ProtoField: "amount"}, {ProtoField: "pay_from_bond"}},
+				},
+				{
+					RpcMethod:      "Vote",
+					Use:            "vote [id] [vote]",
+					Short:          "Execute the Vote RPC method",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "id"}, {ProtoField: "vote"}},
+				},
+				{
+					RpcMethod:      "WithdrawFeeRefund",
+					Use:            "withdraw-fee-refund [payer-address] [id]",
+					Short:          "Execute the WithdrawFeeRefund RPC method",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "payer_address"}, {ProtoField: "id"}},
+				},
+				{
+					RpcMethod: "UpdateTeam",
+					Skip:      true, // skipped because team gated
+				},
+				{
+					RpcMethod:      "ClaimReward",
+					Use:            "claim-reward [dispute_id]",
+					Short:          "Execute the ClaimReward RPC method",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "dispute_id"}},
+				},
+			},
+		},
+	}
+}
