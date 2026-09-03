@@ -48,7 +48,16 @@ else
     exit 0
   fi
 
-  GIT_DIFF=$(echo $GIT_DIFF | tr -d "'" | tr ' ' '\n' | grep '\.go$' | grep -v '\.pb\.go$' | grep -Eo '^[^/]+\/[^/]+' | uniq)
+  # The pipeline below filters the changed-file list down to Go packages. When a commit
+  # touches only non-Go files that still match the workflow's patterns (go.mod / go.sum),
+  # grep matches nothing and exits 1, which under `set -e -o pipefail` killed this script
+  # with no output and failed the lint job. Treat "no Go files changed" as nothing to lint.
+  GIT_DIFF=$(echo $GIT_DIFF | tr -d "'" | tr ' ' '\n' | grep '\.go$' | grep -v '\.pb\.go$' | grep -Eo '^[^/]+\/[^/]+' | uniq) || true
+
+  if [[ -z "$GIT_DIFF" ]]; then
+    echo "no Go files to lint"
+    exit 0
+  fi
 
   lint_sdk=false
   for dir in ${GIT_DIFF[@]}; do
